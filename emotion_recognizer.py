@@ -60,6 +60,7 @@ for a in range(len(r)):
 audio_df = pd.merge(df,races)
 
 audio_df_asia = audio_df[audio_df['race']=='Asia']
+#to do the experiments for the other races, change 'Asia' for 'Caucasian' or 'African American'
 
 audio_df = audio_df[audio_df['race']!='Unknown']
 
@@ -67,30 +68,9 @@ audio_df_asia = audio_df_asia.reset_index(drop=True)  #adding the mel spectogram
 
 audio_df = audio_df.reset_index(drop=True)  #adding the mel spectogram values later won't work if we don't do this
 
-# PUT EXTRACTED LABELS WITH FILEPATH INTO DATAFRAME
-'''
-audio_df = pd.DataFrame(emotion)
-audio_df = audio_df.replace({1:'neutral', 2:'calm', 3:'happy', 4:'sad', 5:'angry', 6:'fear', 7:'disgust', 8:'surprise'})
-audio_df = pd.concat([pd.DataFrame(gender),audio_df,pd.DataFrame(actor)],axis=1)
-audio_df.columns = ['gender','emotion','actor']
-audio_df = pd.concat([audio_df,pd.DataFrame(file_path, columns = ['path'])],axis=1)
-audio_df
-'''
-
-# ENSURE GENDER,EMOTION, AND ACTOR COLUMN VALUES ARE CORRECT
-'''
-pd.set_option('display.max_colwidth', -1)
-
-audio_df.sample(10)
-'''
-
-# LOOK AT DISTRIBUTION OF CLASSES
-audio_df.emotion.value_counts().plot(kind='bar')
-
-# EXPORT TO CSV
-audio_df.to_csv('Uploads/audio.csv')
-
-"""## Feature Extraction"""
+"""
+Feature Extraction
+"""
 
 # ITERATE OVER ALL AUDIO FILES AND EXTRACT LOG MEL SPECTROGRAM MEAN VALUES INTO DF FOR MODELING 
 def mel_spectrogram(dataframe):
@@ -104,23 +84,6 @@ def mel_spectrogram(dataframe):
       db_spec = librosa.power_to_db(spectrogram)
       #temporally average spectrogram
       log_spectrogram = np.mean(db_spec, axis = 0)
-          
-      # Mel-frequency cepstral coefficients (MFCCs)
-  #     mfcc = librosa.feature.mfcc(y=X, sr=sample_rate, n_mfcc=13)
-  #     mfcc=np.mean(mfcc,axis=0)
-      
-      # compute chroma energy (pertains to 12 different pitch classes)
-  #     chroma = librosa.feature.chroma_stft(y=X, sr=sample_rate)
-  #     chroma = np.mean(chroma, axis = 0)
-
-      # compute spectral contrast
-  #     contrast = librosa.feature.spectral_contrast(y=X, sr=sample_rate)
-  #     contrast = np.mean(contrast, axis= 0)
-
-      # compute zero-crossing-rate (zcr:the zcr is the rate of sign changes along a signal i.e.m the rate at 
-  #     which the signal changes from positive to negative or back - separation of voiced andunvoiced speech.)
-  #     zcr = librosa.feature.zero_crossing_rate(y=X)
-  #     zcr = np.mean(zcr, axis= 0)
       
       df.loc[counter] = [log_spectrogram]
       counter=counter+1
@@ -128,49 +91,31 @@ def mel_spectrogram(dataframe):
 
 df = mel_spectrogram(audio_df)
 df_asia = mel_spectrogram(audio_df_asia)
-print(len(df))
-print(len(df_asia))
-df.head()
 
 # TURN ARRAY INTO LIST AND JOIN WITH AUDIO_DF TO GET CORRESPONDING EMOTION LABELS
 df_combined = pd.concat([audio_df,pd.DataFrame(df['mel_spectrogram'].values.tolist())],axis=1)
 df_combined = df_combined.fillna(0)
 
-#MAR
 df_combined_asia = pd.concat([audio_df_asia,pd.DataFrame(df_asia['mel_spectrogram'].values.tolist())],axis=1)
 df_combined_asia = df_combined_asia.fillna(0)
 
 # DROP PATH COLUMN FOR MODELING
 df_combined.drop(columns='path',inplace=True)
 
-len(np.where(audio_df['race']=='Asian')[0])
-
-#MAR
 df_combined_asia.drop(columns='path',inplace=True)
 
-# CHECK TOP 5 ROWS
-df_combined.head()
-
-"""# Prepping Data for Modeling"""
+"""
+Prepping Data for Modeling
+"""
 
 # TRAIN TEST SPLIT DATA
-train,test = train_test_split(df_combined, test_size=0.2, random_state=0,
-                               stratify=df_combined[['emotion','race','actor']])
-
-#MAR
-print(len(df_combined))
-print(len(df_combined_asia))
 train_asia,test_asia = train_test_split(df_combined_asia, test_size=0.2, random_state=None,
                                stratify=None)
-train = pd.concat([df_combined,test_asia]).drop_duplicates(keep=False)
-print(len(test_asia))
-print(len(train_asia))
-len(train)
-
-#MAR
-test_asia.index.values
-
-#MAR
+if first == True:
+    train = pd.concat([df_combined,test_asia]).drop_duplicates(keep=False)
+    
+else:
+    test_asia.index.values
 test_asia = df_combined_asia.iloc[[ 940,  292,  563,  673,  540, 1386, 1250,  865, 1582, 1801,  232,
         141, 1093,  958, 1546, 1231, 1126,  229, 1608, 1351,  198,  758,
        1052,  773, 1583,    5, 1008,  488, 1157, 1536,  326, 1368,   18,
